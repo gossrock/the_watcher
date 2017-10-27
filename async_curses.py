@@ -10,7 +10,8 @@ class BorderedWindow:
 		self.border = self.parent.derwin(height, width, y_start, x_start)
 		self.border.box()
 		self.border.noutrefresh()
-		self.text_area = self.border.derwin(height-2, width-2, 1,1)
+		self.text_area = self.parent.derwin(height-2, width-2, 1,1)
+		self.text_area.scrollok(True)
 	
 	@property
 	def contents(self):
@@ -18,10 +19,15 @@ class BorderedWindow:
 	
 	@contents.setter
 	def contents(self, value):
-		self.text_area.clear()
-		self.text_area.addstr(str(value))
+		self.clear_text()
+		self.Contents = str(value)
+		self.text_area.addstr(0,0, self.Contents)
 		self.text_area.noutrefresh()
-	
+
+	def clear_text(self):
+		maxy, maxx = self.text_area.getmaxyx()
+		self.text_area.addstr(0,0, ' '*maxy*maxx)
+		self.text_area.noutrefresh()
 
 class BaseUI:
 	def __init__(self, frame_rate=10):
@@ -77,7 +83,12 @@ class TestingUI_1(BaseUI):
 				await asyncio.sleep(0)
 				if self.close:
 					return
-				self.textarea.contents = random.randint(10000,99999)
+				messages = [	'this is a test', 
+						'this is really a test', 
+						'another',
+						'test'
+					]
+				self.textarea.contents = random.choice(messages)
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
@@ -87,7 +98,7 @@ class TestingUI_1(BaseUI):
 			
 
 def run_testing_ui():
-	with TestingUI_1(frame_rate=5) as ui:
+	with TestingUI_1(frame_rate=1) as ui:
 		loop = asyncio.get_event_loop()
 		asyncio.ensure_future(ui.test_worker())
 		loop.run_until_complete(ui.screen_updater())
