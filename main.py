@@ -5,9 +5,15 @@ import async_curses
 
 class UI(async_curses.BaseUI):
 	def setup(self):
+		maxy, maxx = self.maxyx
+		self.title = async_curses.BorderedWindow(self.main_window, 3, maxx, 0, 0)
+		title_text = "Network 10.10.1.0/24"
+		num_spaces = (maxx -2 - len(title_text))//2
+		self.title.contents = ' '*num_spaces + title_text
+		self.body = async_curses.BorderedWindow(self.main_window, maxy - 3, maxx, 3, 0)
 		self.rows = 52
 		self.cols = 5
-		self.layout = async_curses.TableLayout(self.main_window, self.rows, self.cols)
+		self.layout = async_curses.TableLayout(self.body.text_area, self.rows, self.cols)
 		
 	async def worker(self):
 		try:
@@ -20,7 +26,7 @@ class UI(async_curses.BaseUI):
 				textarea = self.layout.sub_windows[r][c]
 				if self.close:
 					return
-				if num<255:
+				if num<=255:
 					textarea.contents = f'{num}: {randvalue}'
 		except KeyboardInterrupt:
 			self.cleanup()

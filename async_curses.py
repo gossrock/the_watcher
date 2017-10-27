@@ -6,6 +6,10 @@ import math
 
 
 class Window:
+	"""
+		represents a window space on the screen that you can place text in
+	"""
+	contents = None
 	def __init__(self, parent, height, width, y_start, x_start):
 		self.parent = parent
 		self.text_area = self.parent.derwin(height, width, y_start, x_start)
@@ -14,24 +18,34 @@ class Window:
 
 	@property
 	def contents(self):
+		''' getter for contents (mainly ment to create a property for the following setter)'''
 		return self.Contents
 	
 	@contents.setter
 	def contents(self, value):
+		''' setter for contests of the text area '''
 		self.clear_text()
 		self.Contents = str(value)
 		self.text_area.addstr(0,0, self.Contents)
 		self.text_area.noutrefresh()
 
 	def clear_text(self):
+		''' clears the window '''
 		# this is probobly a bit of a hack but ...
 		#	self.text_area.clear() makes everything blink
 		maxy, maxx = self.text_area.getmaxyx()
 		self.text_area.addstr(0,0, ' '*maxy*maxx)
 		self.text_area.noutrefresh()
+		
+	@property
+	def maxyx(self):
+		return self.text_area.getmaxyx()
 
 
 class BorderedWindow(Window):
+	'''
+		a sub class of Window that simply has a border around it.
+	'''
 	def __init__(self, parent, height, width, y_start, x_start):
 		self.parent = parent
 		self.border = self.parent.derwin(height, width, y_start, x_start)
@@ -43,6 +57,11 @@ class BorderedWindow(Window):
 
 
 class TableLayout:
+	'''
+		used to create multiple windows of a spectified type that are equaly spaced
+		into the given number of rows and cols. I have it as a class but it may
+		be better to change it to simply a function that returns a '2d' list.
+	'''
 	def __init__(self, parent, rows, cols, window_type=Window):
 		self.parent = parent
 		self.sub_windows = [ [ None for i in range(cols) ] for j in range(rows) ]
@@ -60,12 +79,21 @@ class TableLayout:
 
 
 class BaseUI:
-	def __init__(self, frame_rate=10):
+	'''
+		a class that represents the UI and is used as the base for specific UIs
+	'''
+	def __init__(self, frame_rate=1):
+		'''
+			creates the UI and sets it's fram rate.
+		'''
 		self.frame_rate = frame_rate
 		self.close = False
 		
 		
 	def __enter__(self):
+		'''
+			initalizes this UI for use in context managers
+		'''
 		self.main_window = curses.initscr()
 		
 		self.main_window.nodelay(True)
@@ -75,17 +103,32 @@ class BaseUI:
 		return self
 		
 	def setup(self):
+		'''
+			this is where you create all the sub windows/etc for the class
+		'''
 		pass
 		
 	def cleanup(self):
+		'''
+			this is where you do any special clean up when closing down your UI
+		'''
 		pass
 		
 	def __exit__(self, *args):
+		'''
+			used to return the consle back to normal after leaving the context
+		'''
 		curses.nocbreak()
 		curses.endwin()
 
+	@property
+	def maxyx(self):
+		return self.main_window.getmaxyx()
 
 	async def screen_updater(self):
+		'''
+			a Job that is used to refresh the screen at the specified frame rate
+		'''
 		try:
 			while True:
 				await(asyncio.sleep(1/self.frame_rate))
@@ -103,6 +146,9 @@ class BaseUI:
 
 
 class TestingUI_1(BaseUI):
+	'''
+		My first test creates a single border window and randomly changes the message in it.
+	'''
 	def setup(self):
 		maxy, maxx = self.main_window.getmaxyx()
 		self.textarea = BorderedWindow(self.main_window, maxy, maxx, 0, 0)
@@ -124,6 +170,9 @@ class TestingUI_1(BaseUI):
 			return
 
 class TestingUI_2(BaseUI):
+	'''
+		My second test creates 2 non bordered windows and randomly places messages in each
+	'''
 	def setup(self):
 		maxy, maxx = self.main_window.getmaxyx()
 		self.textarea1 = Window(self.main_window, math.floor(maxy/2), maxx, 0, 0)
@@ -164,10 +213,14 @@ class TestingUI_2(BaseUI):
 
 
 class TestingUI_3(BaseUI):
+	'''
+		my third test that creates a 2 rows of 3 windows that are borderd and randomly 
+		selects a window and changes it's text.
+	'''
 	def setup(self):
 		self.rows = 2
 		self.cols = 3
-		self.layout = TableLayout(self.main_window, self.rows, self.cols) #, BorderedWindow)
+		self.layout = TableLayout(self.main_window, self.rows, self.cols, BorderedWindow)
 	
 	async def test_worker(self):
 		try:
