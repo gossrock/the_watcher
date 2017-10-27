@@ -167,7 +167,7 @@ class TestingUI_3(BaseUI):
 	def setup(self):
 		self.rows = 2
 		self.cols = 3
-		self.layout = TableLayout(self.main_window, self.rows, self.cols, BorderedWindow)
+		self.layout = TableLayout(self.main_window, self.rows, self.cols) #, BorderedWindow)
 	
 	async def test_worker(self):
 		try:
@@ -191,23 +191,24 @@ class TestingUI_3(BaseUI):
 		
 
 def run_testing_ui():
-	with TestingUI_1(frame_rate=1) as ui:
-		loop = asyncio.get_event_loop()
-		asyncio.ensure_future(ui.test_worker())
-		loop.run_until_complete(ui.screen_updater())
-	
-	with TestingUI_2(frame_rate=1) as ui:
-		loop = asyncio.get_event_loop()
-		asyncio.ensure_future(ui.test_worker_1())
-		asyncio.ensure_future(ui.test_worker_2())
-		loop.run_until_complete(ui.screen_updater())
+	try:
+		with TestingUI_1(frame_rate=1) as ui:
+			loop = asyncio.get_event_loop()
+			asyncio.ensure_future(ui.test_worker())
+			loop.run_until_complete(ui.screen_updater())
 		
-	with TestingUI_3(frame_rate=1) as ui:
-		loop = asyncio.get_event_loop()
-		asyncio.ensure_future(ui.test_worker())
-		loop.run_until_complete(ui.screen_updater())
-	
-	#print('ending program')
+		with TestingUI_2(frame_rate=1) as ui:
+			loop = asyncio.get_event_loop()
+			asyncio.ensure_future(ui.test_worker_1())
+			asyncio.ensure_future(ui.test_worker_2())
+			loop.run_until_complete(ui.screen_updater())
+			
+		with TestingUI_3(frame_rate=1) as ui:
+			loop = asyncio.get_event_loop()
+			asyncio.ensure_future(ui.test_worker())
+			loop.run_until_complete(ui.screen_updater())
+	except KeyboardInterrupt:
+		print('ending program')
 		
 
 if __name__=='__main__':
