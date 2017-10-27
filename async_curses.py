@@ -2,6 +2,7 @@ import asyncio
 import curses
 
 import random
+import math
 
 
 class BorderedWindow:
@@ -10,8 +11,9 @@ class BorderedWindow:
 		self.border = self.parent.derwin(height, width, y_start, x_start)
 		self.border.box()
 		self.border.noutrefresh()
-		self.text_area = self.parent.derwin(height-2, width-2, 1,1)
+		self.text_area = self.parent.derwin(height-2, width-2, y_start+1, x_start+1)
 		self.text_area.scrollok(True)
+		self.Contents = ''
 	
 	@property
 	def contents(self):
@@ -83,26 +85,67 @@ class TestingUI_1(BaseUI):
 				await asyncio.sleep(0)
 				if self.close:
 					return
-				messages = [	'this is a test', 
+				messages = ['this is a test', 
 						'this is really a test', 
 						'another',
-						'test'
-					]
+						'test']
 				self.textarea.contents = random.choice(messages)
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
 			return
+
+class TestingUI_2(BaseUI):
+	def setup(self):
+		maxy, maxx = self.main_window.getmaxyx()
+		self.textarea1 = BorderedWindow(self.main_window, math.floor(maxy/2), maxx, 0, 0)
+		self.textarea2 = BorderedWindow(self.main_window, math.floor(maxy/2), maxx, math.floor(maxy/2), 0)
 			
-			
-			
+	async def test_worker_1(self):
+		try:
+			while True:
+				await asyncio.sleep(0)
+				if self.close:
+					return
+				messages = ['this is a test', 
+						'this is really a test', 
+						'another',
+						'test']
+				self.textarea1.contents = random.choice(messages)+" "+str(random.randint(0, 99999))
+		except KeyboardInterrupt:
+			self.cleanup()
+			self.close = True
+			return
+	
+	
+	async def test_worker_2(self):
+		try:
+			while True:
+				await asyncio.sleep(0)
+				if self.close:
+					return
+				messages = ['this is a test', 
+						'this is really a test', 
+						'another',
+						'test']
+				self.textarea2.contents = random.choice(messages)+" "+str(random.randint(0, 99999))
+		except KeyboardInterrupt:
+			self.cleanup()
+			self.close = True
+			return		
 
 def run_testing_ui():
 	with TestingUI_1(frame_rate=1) as ui:
 		loop = asyncio.get_event_loop()
 		asyncio.ensure_future(ui.test_worker())
 		loop.run_until_complete(ui.screen_updater())
-			
+	
+	with TestingUI_2(frame_rate=1) as ui:
+		loop = asyncio.get_event_loop()
+		asyncio.ensure_future(ui.test_worker_1())
+		asyncio.ensure_future(ui.test_worker_2())
+		loop.run_until_complete(ui.screen_updater())
+	
 	#print('ending program')
 		
 
