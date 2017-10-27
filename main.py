@@ -27,7 +27,9 @@ class UI(async_curses.BaseUI):
 				if self.close:
 					return
 				if num<=255:
-					textarea.contents = f'{num}:'
+					num_str = str(num)
+					num_str = ' '*(3 - len(num_str))+num_str
+					textarea.contents = f'{num_str}:'
 					if randvalue == 'UP':
 						textarea.add(f'{randvalue}', color=async_curses.GREEN)
 					else:
