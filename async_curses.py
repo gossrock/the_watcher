@@ -4,6 +4,9 @@ import curses
 import random
 import math
 
+WHITE = 1
+RED = 2
+GREEN = 3
 
 class Window:
 	"""
@@ -29,6 +32,11 @@ class Window:
 		self.text_area.addstr(0,0, self.Contents)
 		self.text_area.noutrefresh()
 
+	def add(self, text, color=WHITE):
+		self.text_area.addstr(text, curses.color_pair(color))
+		self.text_area.noutrefresh()
+		
+	
 	def clear_text(self):
 		''' clears the window '''
 		# this is probobly a bit of a hack but ...
@@ -86,6 +94,7 @@ class BaseUI:
 		'''
 			creates the UI and sets it's fram rate.
 		'''
+		
 		self.frame_rate = frame_rate
 		self.close = False
 		
@@ -95,7 +104,11 @@ class BaseUI:
 			initalizes this UI for use in context managers
 		'''
 		self.main_window = curses.initscr()
-		
+		curses.start_color()
+		curses.init_pair(WHITE, curses.COLOR_WHITE, curses.COLOR_BLACK)
+		curses.init_pair(RED, curses.COLOR_RED, curses.COLOR_BLACK)
+		curses.init_pair(GREEN, curses.COLOR_GREEN, curses.COLOR_BLACK)
+
 		self.main_window.nodelay(True)
 		self.main_window.keypad(True)
 		curses.noecho()

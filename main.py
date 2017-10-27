@@ -22,12 +22,16 @@ class UI(async_curses.BaseUI):
 				r = random.randint(0, self.rows-1)
 				c = random.randint(0, self.cols-1)
 				num = r + c*self.rows
-				randvalue = random.randint(1, 999)
+				randvalue = random.choice(['UP', 'DOWN'])
 				textarea = self.layout.sub_windows[r][c]
 				if self.close:
 					return
 				if num<=255:
-					textarea.contents = f'{num}: {randvalue}'
+					textarea.contents = f'{num}:'
+					if randvalue == 'UP':
+						textarea.add(f'{randvalue}', color=async_curses.GREEN)
+					else:
+						textarea.add(f'{randvalue}', color=async_curses.RED)
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
