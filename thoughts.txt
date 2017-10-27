@@ -1,0 +1,9 @@
+This project is mostly a way to learn async programming.
+
+Network io and user io will be the 2 factors that will be optimized by async.
+Saving information to the database willl involve file io but because this is 
+much faster than the other 2 I don't think that async will help much.
+
+Initially I would like to have a basic ping scan that happens periodically.
+The results are displayed as a chart of sorts on a terminal using curses.
+I will want to have some way to look at the history of each host.
