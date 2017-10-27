@@ -4,6 +4,25 @@ import curses
 import random
 
 
+class BorderedWindow:
+	def __init__(self, parent, height, width, y_start, x_start):
+		self.parent = parent
+		self.border = self.parent.derwin(height, width, y_start, x_start)
+		self.border.box()
+		self.border.noutrefresh()
+		self.text_area = self.border.derwin(height-2, width-2, 1,1)
+	
+	@property
+	def contents(self):
+		return self.Contents
+	
+	@contents.setter
+	def contents(self, value):
+		self.text_area.clear()
+		self.text_area.addstr(str(value))
+		self.text_area.noutrefresh()
+	
+
 class BaseUI:
 	def __init__(self, frame_rate=10):
 		self.frame_rate = frame_rate
@@ -49,8 +68,8 @@ class BaseUI:
 
 class TestingUI_1(BaseUI):
 	def setup(self):
-		self.main_window.box()
-		self.main_window.noutrefresh()
+		maxy, maxx = self.main_window.getmaxyx()
+		self.textarea = BorderedWindow(self.main_window, maxy, maxx, 0, 0)
 
 	async def test_worker(self):
 		try:
@@ -58,10 +77,7 @@ class TestingUI_1(BaseUI):
 				await asyncio.sleep(0)
 				if self.close:
 					return
-				self.main_window.clear()
-				self.main_window.box()
-				self.main_window.addstr(1,1, str(random.randint(10000,99999)))
-				self.main_window.noutrefresh()
+				self.textarea.contents = random.randint(10000,99999)
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
@@ -71,7 +87,7 @@ class TestingUI_1(BaseUI):
 			
 
 def run_testing_ui():
-	with TestingUI_1(frame_rate=1) as ui:
+	with TestingUI_1(frame_rate=5) as ui:
 		loop = asyncio.get_event_loop()
 		asyncio.ensure_future(ui.test_worker())
 		loop.run_until_complete(ui.screen_updater())
