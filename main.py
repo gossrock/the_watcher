@@ -11,7 +11,7 @@ class UI(async_curses.BaseUI):
 		num_spaces = (maxx -2 - len(title_text))//2
 		self.title.contents = ' '*num_spaces + title_text
 		self.body = async_curses.BorderedWindow(self.main_window, maxy - 3, maxx, 3, 0)
-		self.rows = 50
+		self.rows = 43
 		self.cols = 6
 		self.layout = async_curses.TableLayout(self.body.text_area, self.rows, self.cols)
 		
