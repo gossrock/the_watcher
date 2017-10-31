@@ -14,12 +14,15 @@ SELECT_DEFAULT = 11
 SELECT_RED = 12
 SELECT_GREEN = 13
 
+BLACK_BACKGROUND = 0
+WHITE_BACKGROUND = 1 
+
 class HostInfoWindow(async_curses.Window):
 	def __init__(self, parent, height=-1, width=-1, y_start=0, x_start=0):
 		super().__init__(parent, height, width, y_start, x_start)
 		self.Active = False
 		self.Lable = ''
-		self.Data = ''
+		self.State = ''
 		
 	@property
 	def active(self):
@@ -45,15 +48,15 @@ class HostInfoWindow(async_curses.Window):
 			self.update_contents()
 	
 	@property
-	def data(self):
-		return self.Data
+	def state(self):
+		return self.State
 		
-	@data.setter
-	def data(self, value):
-		old = self.data
+	@state.setter
+	def state(self, value):
+		old = self.state
 		if value == 'UP' or value == 'DOWN':
-			self.Data = value
-		if self.data != old:
+			self.State = value
+		if self.state != old:
 			self.update_contents()
 		
 		
@@ -62,28 +65,30 @@ class HostInfoWindow(async_curses.Window):
 		
 		if self.active:
 			self.add(self.lable+":", color=SELECT_DEFAULT)
-			if self.data == 'UP':
-				self.add(self.data, color=SELECT_GREEN)
+			if self.state == 'UP':
+				self.add(self.state, color=SELECT_GREEN)
 			else:
-				self.add(self.data, color=SELECT_RED)
+				self.add(self.state, color=SELECT_RED)
 		
 		else:
 			self.add(self.lable+":", color=DEFAULT)
-			if self.data == 'UP':
-				self.add(self.data, color=GREEN)
+			if self.state == 'UP':
+				self.add(self.state, color=GREEN)
 			else:
-				self.add(self.data, color=RED)	
+				self.add(self.state, color=RED)	
 		self.text_area.noutrefresh()
 
 
 
 class UI(async_curses.BaseUI):
 	def setup(self):
-		curses.init_pair(DEFAULT, curses.COLOR_WHITE, curses.COLOR_BLACK)
+		curses.init_pair(DEFAULT, curses.COLOR_CYAN, curses.COLOR_BLACK)
 		curses.init_pair(RED, curses.COLOR_RED, curses.COLOR_BLACK)
 		curses.init_pair(GREEN, curses.COLOR_GREEN, curses.COLOR_BLACK)
 		
-		curses.init_pair(SELECT_DEFAULT, curses.COLOR_BLACK, curses.COLOR_WHITE)
+		
+		
+		curses.init_pair(SELECT_DEFAULT, curses.COLOR_CYAN, curses.COLOR_WHITE)
 		curses.init_pair(SELECT_RED, curses.COLOR_RED, curses.COLOR_WHITE)
 		curses.init_pair(SELECT_GREEN, curses.COLOR_GREEN, curses.COLOR_WHITE)
 		
@@ -113,7 +118,8 @@ class UI(async_curses.BaseUI):
 					return
 				if num<=255:
 					textarea.lable = str(num)
-					textarea.data = randvalue
+					textarea.state = randvalue
+					
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
