@@ -1,10 +1,92 @@
 import asyncio
+import curses
 import random
 
 import async_curses
 
+import time
+
+DEFAULT = 1 # DEFAULT_COLOR
+RED = 2
+GREEN = 3
+
+SELECT_DEFAULT = 11
+SELECT_RED = 12
+SELECT_GREEN = 13
+
+class HostInfoWindow(async_curses.Window):
+	def __init__(self, parent, height=-1, width=-1, y_start=0, x_start=0):
+		super().__init__(parent, height, width, y_start, x_start)
+		self.Active = False
+		self.Lable = ''
+		self.Data = ''
+		
+	@property
+	def active(self):
+		return self.Active
+	
+	@active.setter
+	def active(self, value):
+		old = self.active
+		if value == True or value == False:
+			self.Active = value
+		if self.active != old:
+			self.update_contents()
+	
+	@property
+	def lable(self):
+		return self.Lable
+		
+	@lable.setter
+	def lable(self, value):
+		old = self.Lable
+		self.Lable = str(value)
+		if self.lable != old:
+			self.update_contents()
+	
+	@property
+	def data(self):
+		return self.Data
+		
+	@data.setter
+	def data(self, value):
+		old = self.data
+		if value == 'UP' or value == 'DOWN':
+			self.Data = value
+		if self.data != old:
+			self.update_contents()
+		
+		
+	def update_contents(self):
+		self.clear_text()
+		
+		if self.active:
+			self.add(self.lable+":", color=SELECT_DEFAULT)
+			if self.data == 'UP':
+				self.add(self.data, color=SELECT_GREEN)
+			else:
+				self.add(self.data, color=SELECT_RED)
+		
+		else:
+			self.add(self.lable+":", color=DEFAULT)
+			if self.data == 'UP':
+				self.add(self.data, color=GREEN)
+			else:
+				self.add(self.data, color=RED)	
+		self.text_area.noutrefresh()
+
+
+
 class UI(async_curses.BaseUI):
 	def setup(self):
+		curses.init_pair(DEFAULT, curses.COLOR_WHITE, curses.COLOR_BLACK)
+		curses.init_pair(RED, curses.COLOR_RED, curses.COLOR_BLACK)
+		curses.init_pair(GREEN, curses.COLOR_GREEN, curses.COLOR_BLACK)
+		
+		curses.init_pair(SELECT_DEFAULT, curses.COLOR_BLACK, curses.COLOR_WHITE)
+		curses.init_pair(SELECT_RED, curses.COLOR_RED, curses.COLOR_WHITE)
+		curses.init_pair(SELECT_GREEN, curses.COLOR_GREEN, curses.COLOR_WHITE)
+		
 		maxy, maxx = self.maxyx
 		self.title = async_curses.BorderedWindow(self.main_window, 3, maxx, 0, 0)
 		title_text = "Network 10.10.1.0/24"
@@ -13,7 +95,10 @@ class UI(async_curses.BaseUI):
 		self.body = async_curses.BorderedWindow(self.main_window, maxy - 3, maxx, 3, 0)
 		self.rows = 43
 		self.cols = 6
-		self.layout = async_curses.TableLayout(self.body.text_area, self.rows, self.cols)
+		
+		self.layout = async_curses.TableLayout(self.body.text_area, self.rows, self.cols, HostInfoWindow)
+		self.active_cell = [0,0]
+		
 		
 	async def worker(self):
 		try:
@@ -27,23 +112,46 @@ class UI(async_curses.BaseUI):
 				if self.close:
 					return
 				if num<=255:
-					num_str = str(num)
-					num_str = ' '*(3 - len(num_str))+num_str
-					textarea.contents = f'{num_str}:'
-					if randvalue == 'UP':
-						textarea.add(f'{randvalue}', color=async_curses.GREEN)
-					else:
-						textarea.add(f'{randvalue}', color=async_curses.RED)
+					textarea.lable = str(num)
+					textarea.data = randvalue
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
 			return
+			
+	def key_stroke_handler(self, key):
+		last_active = self.layout.sub_windows[self.active_cell[0]][self.active_cell[1]]
+		last_active.active = False
+		
+		if key == curses.KEY_UP:
+			self.active_cell[0] -= 1
+			if self.active_cell[0] < 0:
+				self.active_cell[0] = 0
+				
+		elif key == curses.KEY_DOWN:
+			self.active_cell[0] += 1
+			if self.active_cell[0] > self.rows - 1:
+				self.active_cell[0] = self.rows - 1
+				
+		elif key == curses.KEY_RIGHT:
+			self.active_cell[1] += 1
+			if self.active_cell[1] > self.cols -1:
+				self.active_cell[1] = self.cols -1
+			
+		elif key == curses.KEY_LEFT:
+			self.active_cell[1] -= 1
+			if self.active_cell[1] < 0:
+				self.active_cell[1] = 0
+			
+		current_active = self.layout.sub_windows[self.active_cell[0]][self.active_cell[1]]
+		current_active.active = True
 
 if __name__=='__main__':
 	try:
-		with UI() as ui:
+		with UI(frame_rate=10) as ui:
 			loop = asyncio.get_event_loop()
 			asyncio.ensure_future(ui.worker())
+			asyncio.ensure_future(ui.keyboard_listener())
 			loop.run_until_complete(ui.screen_updater())
 	except KeyboardInterrupt:
 		pass

@@ -3,10 +3,10 @@ import curses
 
 import random
 import math
+import time
 
-WHITE = 1
-RED = 2
-GREEN = 3
+DEFAULT_COLOR = 1
+
 
 class Window:
 	"""
@@ -39,7 +39,7 @@ class Window:
 		self.text_area.addstr(0,0, self.Contents)
 		self.text_area.noutrefresh()
 
-	def add(self, text, color=WHITE):
+	def add(self, text, color=DEFAULT_COLOR):
 		self.text_area.addstr(text, curses.color_pair(color))
 		self.text_area.noutrefresh()
 		
@@ -123,9 +123,7 @@ class BaseUI:
 		self.main_window.keypad(True)
 		curses.noecho()
 		curses.start_color()
-		curses.init_pair(WHITE, curses.COLOR_WHITE, curses.COLOR_BLACK)
-		curses.init_pair(RED, curses.COLOR_RED, curses.COLOR_BLACK)
-		curses.init_pair(GREEN, curses.COLOR_GREEN, curses.COLOR_BLACK)
+		
 
 		
 		self.setup()
@@ -164,11 +162,15 @@ class BaseUI:
 				if self.close:
 					return
 				else:
+					self.pre_update_work()
 					curses.doupdate()
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
 			return
+	
+	def pre_update_work(self):
+		pass
 	
 	async def keyboard_listener(self):
 		while True:
