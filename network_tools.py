@@ -136,7 +136,7 @@ def run_test():
 	print_result(result)
 	
 	#test 3
-	results = loop.run_until_complete(ping_scan('10.10.8.0/24'))
+	results = loop.run_until_complete(ping_scan('10.10.32.0/24'))
 	
 	# Print a report
 	for result in results:
@@ -144,7 +144,9 @@ def run_test():
 		print(parse_ping_output(*result))
 	
 	for result in results:
-		print_ping_results(parse_ping_output(*result))
+		parsed_results = parse_ping_output(*result)
+		if parsed_results.state == STATE_UP:
+			print_ping_results(parsed_results)
 	
 		
 	loop.close()
