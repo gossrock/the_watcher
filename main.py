@@ -111,36 +111,14 @@ class UI(async_curses.BaseUI):
 		
 		self.active_cell = [0,0]
 		self.ping_results = {}
-		
-		
-	async def worker(self):
-		try:
-			while True:
-				await asyncio.sleep(0.01)
-				r = random.randint(0, self.rows-1)
-				c = random.randint(0, self.cols-1)
-				num = r + c*self.rows
-				randvalue = random.choice(['UP', 'DOWN'])
-				textarea = self.layout.sub_windows[r][c]
-				if self.close:
-					return
-				if num<=255:
-					textarea.lable = str(num)
-					textarea.state = randvalue
-					
-		except KeyboardInterrupt:
-			self.cleanup()
-			self.close = True
-			return
 			
 	async def ping_worker(self, rate):
 		tasks = []
+		num = 0
 		while True:
 			await asyncio.sleep(rate)
-			num = random.randint(0, 255)
-			if not (num > 255):
-				task = asyncio.ensure_future(network_tools.ping(f'10.10.8.{num}'))
-				tasks.append(task)
+			task = asyncio.ensure_future(network_tools.ping(f'10.10.8.{num}'))
+			tasks.append(task)
 			
 			#check for results
 			for task in tasks:
@@ -160,6 +138,9 @@ class UI(async_curses.BaseUI):
 					textarea = self.layout.sub_windows[r][c]
 					textarea.lable = str(ip_num)
 					textarea.state = result.state
+			num += 1
+			if num > 255:
+				num = 0
 					
 			
 	def key_stroke_handler(self, key):
