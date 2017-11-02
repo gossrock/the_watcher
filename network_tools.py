@@ -22,6 +22,16 @@ PingResults = namedtuple('PingResults', ['host', 'ip', 'reverse_dns', 'state', '
 async def ping(host):
 	return await run_command('ping', '-c', '1', '-W', '1', host)
 
+def reverse_dns(ip):
+	if ip is not None:
+		try:
+			return socket.gethostbyaddr(ip)[0]
+		except socket.herror:
+			return None
+	else:
+		return None
+
+
 
 STATE_UP = True
 STATE_DOWN = False
@@ -34,7 +44,7 @@ ERROR_BRODCAST_MSG = 'brodcast address ping'
 def parse_ping_output(command, out, error):
 	what_was_pinged = None
 	ip_of_what_was_pinged = None
-	reverse_dns = None
+	r_dns = None
 	up_or_down = None
 	ping_time = None
 	error_type = None
@@ -64,14 +74,14 @@ def parse_ping_output(command, out, error):
 		else: # for unknown errors
 			error_type = error
 		
-	if ip_of_what_was_pinged is not None:
-		try:
-			reverse_dns = socket.gethostbyaddr(ip_of_what_was_pinged)[0]
-		except:
-			pass
+	if ip_of_what_was_pinged is not None and up_or_down == STATE_UP:
+		r_dns = reverse_dns(ip_of_what_was_pinged)
 	
-	return PingResults(host=what_was_pinged, ip=ip_of_what_was_pinged, reverse_dns=reverse_dns, 
+	return PingResults(host=what_was_pinged, ip=ip_of_what_was_pinged, reverse_dns=r_dns, 
 						state=up_or_down, time=ping_time, error=error_type)
+
+
+
 
 
 def print_ping_results(results):
@@ -117,7 +127,7 @@ def run_test():
 	print_result(result)
 	
 	#test 3
-	results = loop.run_until_complete(ping_scan('10.10.32.0/24'))
+	results = loop.run_until_complete(ping_scan('10.10.8.0/24'))
 	
 	# Print a report
 	for result in results:
