@@ -4,39 +4,20 @@ import socket
 
 from collections import namedtuple
 
-CommandResult = namedtuple('CommandResult', ['command', 'out', 'error'])
+from command_execution import *
+
+
+
 PingResults = namedtuple('PingResults', ['host', 'ip', 'reverse_dns', 'state', 'time', 'error'])
 
-def command_to_string(command):
-	command_string = ''
-	for part in command:
-		if command_string != '':
-			command_string += ' '
-		command_string += part
-		
-	return command_string
+
 	
-def print_command(command):
-	print(command_to_string(command))
-
-def print_result(result):
-	print('=============================================')
-	print(f'COMMAND:{command_to_string(result.command)}')
-	if result.out != '':
-		print('STDOUT')
-		print(result.out)
-	if result.error != '':
-		print('STDERROR')
-		print(result.error)
-	print('=============================================')
 
 
-async def run_command(*args):
-	process = await asyncio.create_subprocess_exec( *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-	stdout, stderr = await process.communicate()
-	out = stdout.decode().strip()
-	error = stderr.decode().strip()
-	return CommandResult(args, out, error)
+
+
+
+
 
 async def ping(host):
 	return await run_command('ping', '-c', '1', '-W', '1', host)
