@@ -1,8 +1,10 @@
 import asyncio
 import curses
 import random
+import math
 
 import async_curses
+import network_tools
 
 import time
 
@@ -56,6 +58,10 @@ class HostInfoWindow(async_curses.Window):
 		old = self.state
 		if value == 'UP' or value == 'DOWN':
 			self.State = value
+		elif value == network_tools.STATE_UP:
+			self.State = 'UP'
+		elif value == network_tools.STATE_DOWN:
+			self.State = 'DOWN'
 		if self.state != old:
 			self.update_contents()
 		
@@ -102,7 +108,9 @@ class UI(async_curses.BaseUI):
 		self.cols = 6
 		
 		self.layout = async_curses.TableLayout(self.body.text_area, self.rows, self.cols, HostInfoWindow)
+		
 		self.active_cell = [0,0]
+		self.ping_results = {}
 		
 		
 	async def worker(self):
@@ -124,6 +132,35 @@ class UI(async_curses.BaseUI):
 			self.cleanup()
 			self.close = True
 			return
+			
+	async def ping_worker(self, rate):
+		tasks = []
+		while True:
+			await asyncio.sleep(rate)
+			num = random.randint(0, 255)
+			if not (num > 255):
+				task = asyncio.ensure_future(network_tools.ping(f'10.10.8.{num}'))
+				tasks.append(task)
+			
+			#check for results
+			for task in tasks:
+				await asyncio.sleep(0)
+				if task.done():
+					tasks.remove(task)
+					result = task.result()
+					result = network_tools.parse_ping_output(*result)
+					ip_num = None
+					if result.ip is not None:
+						ip_num = int(result.ip.split('.')[3])
+					else:
+						continue
+					c = math.floor(ip_num/self.rows)
+					r = ip_num % self.rows
+					
+					textarea = self.layout.sub_windows[r][c]
+					textarea.lable = str(ip_num)
+					textarea.state = result.state
+					
 			
 	def key_stroke_handler(self, key):
 		last_active = self.layout.sub_windows[self.active_cell[0]][self.active_cell[1]]
@@ -156,8 +193,8 @@ if __name__=='__main__':
 	try:
 		with UI(frame_rate=10) as ui:
 			loop = asyncio.get_event_loop()
-			asyncio.ensure_future(ui.worker())
 			asyncio.ensure_future(ui.keyboard_listener())
+			asyncio.ensure_future(ui.ping_worker(0.1))
 			loop.run_until_complete(ui.screen_updater())
 	except KeyboardInterrupt:
 		pass
