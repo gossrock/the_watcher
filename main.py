@@ -23,9 +23,52 @@ class HostInfoWindow(async_curses.Window):
 	def __init__(self, parent, height=-1, width=-1, y_start=0, x_start=0):
 		super().__init__(parent, height, width, y_start, x_start)
 		self.Active = False
-		self.Lable = ''
-		self.State = ''
+		self.PingResults = None
+	
+	@property
+	def ping_results(self):
+		return 
+	
+	@ping_results.setter
+	def ping_results(self, value):
+		# get the colors
+		lable_color = DEFAULT
+		info_color = DEFAULT
+		if self.active:
+			lable_color = SELECT_DEFAULT
+			info_color = SELECT_DEFAULT
+			if value.state == network_tools.STATE_UP:
+				info_color = SELECT_GREEN
+			else:
+				info_color = SELECT_RED
+				
+		else:
+			if value.state == network_tools.STATE_UP:
+				info_color = GREEN
+			else:
+				info_color = RED
 		
+		lable = '-:'
+		host = 'Unknown'
+		r_dns = None
+		if value.ip is not None:
+			lable = value.ip.split('.')[3] + ':'
+			r_dns = network_tools.reverse_dns(value.ip)
+			if r_dns is not None:
+				host = r_dns.split('.')[0]
+			width = self.maxyx[1] - 4
+			if len(host)>width:
+				host = host[0:width-1]
+				
+		info = host
+		
+		
+		self.clear_text()
+		self.add(lable, color=lable_color)
+		self.add(info, color=info_color)
+		self.text_area.noutrefresh()
+		
+	
 	@property
 	def active(self):
 		return self.Active
@@ -37,7 +80,7 @@ class HostInfoWindow(async_curses.Window):
 			self.Active = value
 		if self.active != old:
 			self.update_contents()
-	
+	'''
 	@property
 	def lable(self):
 		return self.Lable
@@ -65,7 +108,6 @@ class HostInfoWindow(async_curses.Window):
 		if self.state != old:
 			self.update_contents()
 		
-		
 	def update_contents(self):
 		self.clear_text()
 		
@@ -83,7 +125,7 @@ class HostInfoWindow(async_curses.Window):
 			else:
 				self.add(self.state, color=RED)	
 		self.text_area.noutrefresh()
-
+	'''
 
 
 class UI(async_curses.BaseUI):
@@ -136,8 +178,8 @@ class UI(async_curses.BaseUI):
 					r = ip_num % self.rows
 					
 					textarea = self.layout.sub_windows[r][c]
-					textarea.lable = str(ip_num)
-					textarea.state = result.state
+					textarea.ping_results = result
+					
 			num += 1
 			if num > 255:
 				num = 0
