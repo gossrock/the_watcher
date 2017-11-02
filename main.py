@@ -24,6 +24,10 @@ class HostInfoWindow(async_curses.Window):
 		super().__init__(parent, height, width, y_start, x_start)
 		self.Active = False
 		self.PingResults = None
+		self.lable = '-:'
+		self.lable_color = DEFAULT
+		self.info = 'Unknown'
+		self.info_color = RED
 	
 	@property
 	def ping_results(self):
@@ -32,27 +36,27 @@ class HostInfoWindow(async_curses.Window):
 	@ping_results.setter
 	def ping_results(self, value):
 		# get the colors
-		lable_color = DEFAULT
-		info_color = DEFAULT
+		self.lable_color = DEFAULT
+		self.info_color = DEFAULT
 		if self.active:
-			lable_color = SELECT_DEFAULT
-			info_color = SELECT_DEFAULT
+			self.lable_color = SELECT_DEFAULT
+			self.info_color = SELECT_DEFAULT
 			if value.state == network_tools.STATE_UP:
-				info_color = SELECT_GREEN
+				self.info_color = SELECT_GREEN
 			else:
-				info_color = SELECT_RED
+				self.info_color = SELECT_RED
 				
 		else:
 			if value.state == network_tools.STATE_UP:
-				info_color = GREEN
+				self.info_color = GREEN
 			else:
-				info_color = RED
+				self.info_color = RED
 		
-		lable = '-:'
+		self.lable = '-:'
 		host = 'Unknown'
 		r_dns = None
 		if value.ip is not None:
-			lable = value.ip.split('.')[3] + ':'
+			self.lable = value.ip.split('.')[3] + ':'
 			r_dns = network_tools.reverse_dns(value.ip)
 			if r_dns is not None:
 				host = r_dns.split('.')[0]
@@ -60,13 +64,11 @@ class HostInfoWindow(async_curses.Window):
 			if len(host)>width:
 				host = host[0:width-1]
 				
-		info = host
+		self.info = host
+		
+		self.update_contents()
 		
 		
-		self.clear_text()
-		self.add(lable, color=lable_color)
-		self.add(info, color=info_color)
-		self.text_area.noutrefresh()
 		
 	
 	@property
@@ -75,10 +77,20 @@ class HostInfoWindow(async_curses.Window):
 	
 	@active.setter
 	def active(self, value):
-		old = self.active
 		if value == True or value == False:
 			self.Active = value
-		if self.active != old:
+			if self.active == True:
+				self.lable_color = SELECT_DEFAULT
+				if self.info_color == RED:
+					self.info_color = SELECT_RED
+				elif self.info_color == GREEN:
+					self.info_color = SELECT_GREEN
+			else:
+				self.lable_color = DEFAULT
+				if self.info_color == SELECT_RED:
+					self.info_color = RED
+				elif self.info_color == SELECT_GREEN:
+					self.info_color = GREEN	
 			self.update_contents()
 	'''
 	@property
@@ -107,25 +119,13 @@ class HostInfoWindow(async_curses.Window):
 			self.State = 'DOWN'
 		if self.state != old:
 			self.update_contents()
+	'''
 		
 	def update_contents(self):
 		self.clear_text()
-		
-		if self.active:
-			self.add(self.lable+":", color=SELECT_DEFAULT)
-			if self.state == 'UP':
-				self.add(self.state, color=SELECT_GREEN)
-			else:
-				self.add(self.state, color=SELECT_RED)
-		
-		else:
-			self.add(self.lable+":", color=DEFAULT)
-			if self.state == 'UP':
-				self.add(self.state, color=GREEN)
-			else:
-				self.add(self.state, color=RED)	
+		self.add(self.lable, color=self.lable_color)
+		self.add(self.info, color=self.info_color)
 		self.text_area.noutrefresh()
-	'''
 
 
 class UI(async_curses.BaseUI):
