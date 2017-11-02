@@ -4,24 +4,10 @@ import socket
 
 from collections import namedtuple
 
-from command_execution import *
+from command_execution import run_command, print_result
 
 
-
-PingResults = namedtuple('PingResults', ['host', 'ip', 'reverse_dns', 'state', 'time', 'error'])
-
-
-	
-
-
-
-
-
-
-
-async def ping(host):
-	return await run_command('ping', '-c', '1', '-W', '1', host)
-
+#### REVERSE DNS ####
 def reverse_dns(ip):
 	if ip is not None:
 		try:
@@ -32,7 +18,13 @@ def reverse_dns(ip):
 		return None
 
 
+#### PING ####
+PingResults = namedtuple('PingResults', ['host', 'ip', 'state', 'time', 'error'])
 
+async def ping(host):
+	return await run_command('ping', '-c', '1', '-W', '1', host)
+
+#### PARSE PING RESULTS ####
 STATE_UP = True
 STATE_DOWN = False
 NO_ERROR_UP = ' 0% packet loss'
@@ -77,29 +69,27 @@ def parse_ping_output(command, out, error):
 	if ip_of_what_was_pinged is not None and up_or_down == STATE_UP:
 		r_dns = reverse_dns(ip_of_what_was_pinged)
 	
-	return PingResults(host=what_was_pinged, ip=ip_of_what_was_pinged, reverse_dns=r_dns, 
+	return PingResults(host=what_was_pinged, ip=ip_of_what_was_pinged, 
 						state=up_or_down, time=ping_time, error=error_type)
 
 
-
-
-
+#### PRINT PING RESULTS ####
 def print_ping_results(results):
 	if results.state == STATE_UP:
-		print(f'\r{results.ip}\t{results.time}ms\t{results.reverse_dns}\t IS UP')
+		print(f'\r{results.ip}\t{results.time}ms\t{reverse_dns(results.ip)}\t IS UP')
 	else:
 		if results.error != ERROR_DOWN and results.error != ERROR_BRODCAST:
-			print(f'\r{results.ip}**********\t\terror on {results.ip},{results.reverse_dns} ({results.error})')
+			print(f'\r{results.ip}**********\t\terror on {results.ip},{reverse_dns(results.ip)} ({results.error})')
 		else:
-			print(f'\r{results.ip}\t{results.reverse_dns}\t IS DOWN')
+			print(f'\r{results.ip}\t{reverse_dns(results.ip)}\t IS DOWN')
 
 
+#### PING SCAN ####
 async def ping_scan(network):
 	results = []
 	tasks = []
 	for host in ipaddress.ip_network(network):
 		await asyncio.sleep(0)
-		print(f'pinging {host}')
 		task = asyncio.ensure_future(ping(str(host)))
 		tasks.append(task)
 		
@@ -108,12 +98,16 @@ async def ping_scan(network):
 			await asyncio.sleep(0)
 			if task.done():
 				result = task.result()
-				print(f'finished: {result.command}')
 				results.append(task.result())
 				break
 	return results
 	
+	
+	
 
+
+
+#### TESTS ####
 def run_test():
 	loop = asyncio.get_event_loop()
 	
@@ -136,8 +130,8 @@ def run_test():
 	
 	for result in results:
 		parsed_results = parse_ping_output(*result)
-		if parsed_results.state == STATE_UP:
-			print_ping_results(parsed_results)
+		#if parsed_results.state == STATE_UP:
+		print_ping_results(parsed_results)
 	
 		
 	loop.close()
