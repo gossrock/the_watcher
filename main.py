@@ -60,7 +60,7 @@ class HostInfoWindow(async_curses.Window):
 			r_dns = network_tools.reverse_dns(value.ip)
 			if r_dns is not None:
 				host = r_dns.split('.')[0]
-			width = self.maxyx[1] - 4
+			width = self.maxyx[1] - 5
 			if len(host)>width:
 				host = host[0:width-1]
 				
