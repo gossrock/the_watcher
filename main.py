@@ -193,7 +193,7 @@ if __name__=='__main__':
 	
 	
 	try:
-		with UI(frame_rate=10) as ui:
+		with UI(rate=0.1) as ui:
 			loop = asyncio.get_event_loop()
 			network_info = loop.run_until_complete(network_tools.get_default_nework_info())
 			network_address = ipaddress.IPv4Network(network_info.network_address)

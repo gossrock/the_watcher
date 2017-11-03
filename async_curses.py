@@ -105,12 +105,12 @@ class BaseUI:
 	'''
 		a class that represents the UI and is used as the base for specific UIs
 	'''
-	def __init__(self, frame_rate=1):
+	def __init__(self, rate=1):
 		'''
 			creates the UI and sets it's fram rate.
 		'''
 		
-		self.frame_rate = frame_rate
+		self.rate = rate
 		self.close = False
 		
 		
@@ -160,7 +160,7 @@ class BaseUI:
 		'''
 		try:
 			while True:
-				await(asyncio.sleep(1/self.frame_rate))
+				await asyncio.sleep(self.rate)
 				if self.close:
 					return
 				else:
