@@ -53,7 +53,9 @@ class HostInfoWindow(async_curses.Window):
 				self.info_color = RED
 		
 		self.lable = '-:'
-		host = 'Unknown'
+		host = ''
+		if value.state == network_tools.STATE_UP:
+			host = 'Unknown'
 		r_dns = None
 		if value.ip is not None:
 			self.lable = value.ip.split('.')[3] + ':'
@@ -92,34 +94,6 @@ class HostInfoWindow(async_curses.Window):
 				elif self.info_color == SELECT_GREEN:
 					self.info_color = GREEN	
 			self.update_contents()
-	'''
-	@property
-	def lable(self):
-		return self.Lable
-		
-	@lable.setter
-	def lable(self, value):
-		old = self.Lable
-		self.Lable = str(value)
-		if self.lable != old:
-			self.update_contents()
-	
-	@property
-	def state(self):
-		return self.State
-		
-	@state.setter
-	def state(self, value):
-		old = self.state
-		if value == 'UP' or value == 'DOWN':
-			self.State = value
-		elif value == network_tools.STATE_UP:
-			self.State = 'UP'
-		elif value == network_tools.STATE_DOWN:
-			self.State = 'DOWN'
-		if self.state != old:
-			self.update_contents()
-	'''
 		
 	def update_contents(self):
 		self.clear_text()
