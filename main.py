@@ -2,6 +2,7 @@ import asyncio
 import curses
 import random
 import math
+import ipaddress
 
 import async_curses
 import network_tools
@@ -116,7 +117,7 @@ class UI(async_curses.BaseUI):
 		
 		maxy, maxx = self.maxyx
 		self.title = async_curses.BorderedWindow(self.main_window, 3, maxx, 0, 0)
-		title_text = "Network 10.10.1.0/24"
+		title_text = "Network:"
 		num_spaces = (maxx -2 - len(title_text))//2
 		self.title.contents = ' '*num_spaces + title_text
 		self.body = async_curses.BorderedWindow(self.main_window, maxy - 3, maxx, 3, 0)
@@ -127,37 +128,39 @@ class UI(async_curses.BaseUI):
 		
 		self.active_cell = [0,0]
 		self.ping_results = {}
-			
-	async def ping_worker(self, rate):
+	
+	def set_title(self, network_address):
+		maxy, maxx = self.maxyx
+		title_text = f'Network: {network_address}'
+		num_spaces = (maxx -2 - len(title_text))//2
+		self.title.contents = ' '*num_spaces + title_text
+	
+	async def ping_worker(self, network, rate):
 		tasks = []
-		num = 0
 		while True:
-			await asyncio.sleep(rate)
-			task = asyncio.ensure_future(network_tools.ping(f'10.10.8.{num}'))
-			tasks.append(task)
-			
-			#check for results
-			for task in tasks:
-				await asyncio.sleep(0)
-				if task.done():
-					tasks.remove(task)
-					result = task.result()
-					result = network_tools.parse_ping_output(*result)
-					ip_num = None
-					if result.ip is not None:
-						ip_num = int(result.ip.split('.')[3])
-					else:
-						continue
-					c = math.floor(ip_num/self.rows)
-					r = ip_num % self.rows
-					
-					textarea = self.layout.sub_windows[r][c]
-					textarea.ping_results = result
-					
-			num += 1
-			if num > 255:
-				num = 0
-					
+			for address in network:
+				await asyncio.sleep(rate)
+				address_str = str(address)
+				task = asyncio.ensure_future(network_tools.ping(address_str))
+				tasks.append(task)
+				
+				#check for results
+				for task in tasks:
+					await asyncio.sleep(0)
+					if task.done():
+						tasks.remove(task)
+						result = task.result()
+						result = network_tools.parse_ping_output(*result)
+						ip_num = None
+						if result.ip is not None:
+							ip_num = int(result.ip.split('.')[3])
+						else:
+							continue
+						c = math.floor(ip_num/self.rows)
+						r = ip_num % self.rows
+						
+						textarea = self.layout.sub_windows[r][c]
+						textarea.ping_results = result
 			
 	def key_stroke_handler(self, key):
 		last_active = self.layout.sub_windows[self.active_cell[0]][self.active_cell[1]]
@@ -187,11 +190,17 @@ class UI(async_curses.BaseUI):
 		current_active.active = True
 
 if __name__=='__main__':
+	
+	
 	try:
 		with UI(frame_rate=10) as ui:
 			loop = asyncio.get_event_loop()
+			network_info = loop.run_until_complete(network_tools.get_default_nework_info())
+			network_address = ipaddress.IPv4Network(network_info.network_address)
+			ui.set_title(str(network_address))
+			
 			asyncio.ensure_future(ui.keyboard_listener())
-			asyncio.ensure_future(ui.ping_worker(0.1))
+			asyncio.ensure_future(ui.ping_worker(network_address, 0.1))
 			loop.run_until_complete(ui.screen_updater())
 	except KeyboardInterrupt:
 		pass

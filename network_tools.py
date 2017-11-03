@@ -7,8 +7,9 @@ from collections import namedtuple
 from command_execution import run_command, run_command_str, print_result
 
 #### DEFAULT NETWORK ####
+NetworkInfo = namedtuple('NetworkInfo', ['interface_name', 'network_address', 'gateway', 'host_address'])
 async def get_default_nework_info():
-	command_results = await run_command_str('ip route show')
+	command_results = await run_command_str('ip route')
 	# if there is a default route this command will return something like:
 	
 	# default via 192.168.0.1 dev wlan0
@@ -17,7 +18,7 @@ async def get_default_nework_info():
 	# if there isn't a default route this first line will be missing 
 	
 	# on each of the following lines there is something like this for each interface
-	#192.1168.0.0/24 dev wlan0 proto kernel scope link src 192.168.0.100 metric 600 
+	#192.168.0.0/24 dev wlan0 proto kernel scope link src 192.168.0.100 metric 600 
 	gateway = None
 	interface_name = None
 	network_address = None
@@ -34,7 +35,8 @@ async def get_default_nework_info():
 		return None #there is no default so quit here because we are not on-line.
 		
 	for line in result_lines:
-		words = line.split(' ')
+		words = [item for item in line.split(' ') if item != ''] #my ubuntu 16.04 system has some extra space, so this removes the blank items
+		
 		if words[2] == interface_name: 
 			# if word[2] is the same interface as the name on the default line 
 			# then this line is the one that contains the address information
@@ -45,7 +47,7 @@ async def get_default_nework_info():
 			# the 8th (though I'm afraid it isn't always the 8th) 
 			# is the computers ip address on that network 
 			host_address = words[8] 
-	print( (interface_name, network_address, gateway, host_address, ))
+	return NetworkInfo(interface_name, network_address, gateway, host_address)
 				
 
 
