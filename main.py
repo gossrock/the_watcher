@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import curses
 import random
@@ -191,12 +192,21 @@ class UI(async_curses.BaseUI):
 
 if __name__=='__main__':
 	
-	
 	try:
 		with UI(rate=0.1) as ui:
 			loop = asyncio.get_event_loop()
-			network_info = loop.run_until_complete(network_tools.get_default_nework_info())
-			network_address = ipaddress.IPv4Network(network_info.network_address)
+			
+			parser = argparse.ArgumentParser(description='Network Scanner')
+			parser.add_argument('network', type=str, nargs='?', help='the network to scann')
+			args = parser.parse_args()
+			
+			network_address = None
+			if args.network is not None:
+				network_address = ipaddress.IPv4Network(args.network)
+			else:
+				network_info = loop.run_until_complete(network_tools.get_default_nework_info())
+				network_address = ipaddress.IPv4Network(network_info.network_address)
+				
 			ui.set_title(str(network_address))
 			
 			asyncio.ensure_future(ui.keyboard_listener())
