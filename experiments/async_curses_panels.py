@@ -23,7 +23,6 @@ async def keep_running_till_all_others_complete(loop):
 				not_done = True
 				break
 
-
 def keyboard_interuptable_loop_coroutine(f):
 	'''
 		This decorator is to be used with the TaskLoopBase class and helps
@@ -39,7 +38,6 @@ def keyboard_interuptable_loop_coroutine(f):
 				self.close = True
 	return func_wrapper
 
-
 class TaskLoopBase:
 	'''
 		This class is ment to be the Base for other classes that have a set
@@ -53,9 +51,6 @@ class TaskLoopBase:
 		self.tasks = [] # a list of tasks to run in the asyncio loop. they should all be coroutines.
 		
 	def __enter__(self):
-		'''
-			for setup of context managers
-		'''
 		self.setup()
 		return self
 		
@@ -75,8 +70,6 @@ class TaskLoopBase:
 			what is needed during the objects shutdown phase.
 		'''
 		pass
-		
-	
 	
 	def add_task(self, task):
 		'''
@@ -95,7 +88,6 @@ class TaskLoopBase:
 			# this will more likely happen when there is more work to do in side the worker coroutines (some slight blocking)
 			loop.run_until_complete(keep_running_till_all_others_complete(loop)) 
 		except KeyboardInterrupt as kbi:
-			print('KeyboardInterupt in main function')
 			if self.close is not True:
 				self.close = True
 				# This is for when a KeyboardInterupt happens inside a the "loop.run_forever/loop.run_until_complete" coroutine
@@ -108,8 +100,37 @@ class TaskLoopBase:
 	
 	
 	
+
+#### CURSES UTILS ####
+class Window:
+	pass
 	
+class BaseUI(TaskLoopBase):
+	def __init__(self):
+		super(BaseUI, self).__init__()
 	
+	def __enter__(self):
+		super(BaseUI, self).__enter__()
+		
+	def setup(self):
+		pass
+	
+	def __exit__(self, *args):
+		super(BaseUI, self).__exit__(*args)
+	
+	def cleanup(self):
+		pass
+		
+	
+		
+	
+
+
+
+
+
+	
+#### TESTS ####	
 class TestUI_1(TaskLoopBase):
 	'''
 		testing very little blocking
@@ -130,14 +151,6 @@ class TestUI_2(TaskLoopBase):
 		time.sleep(1)
 		print(f'running test 1 {name}')	
 		
-		
-	
-			
-			
-
-
-
-
 def tests():
 	print('starting')
 	with TestUI_1() as ui:
@@ -151,10 +164,6 @@ def tests():
 		ui.run_until_complete()
 		
 	print('ending')
-
-
-
-
 
 if __name__=='__main__':
 	tests()
