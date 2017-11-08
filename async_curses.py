@@ -158,18 +158,17 @@ class BaseUI:
 		'''
 			a Job that is used to refresh the screen at the specified frame rate
 		'''
-		try:
-			while True:
+		while True:
+			try:
 				await asyncio.sleep(self.rate)
 				if self.close:
 					return
 				else:
 					self.pre_update_work()
 					curses.doupdate()
-		except KeyboardInterrupt:
-			self.cleanup()
-			self.close = True
-			return
+			except KeyboardInterrupt:
+				self.cleanup()
+				self.close = True
 	
 	def pre_update_work(self):
 		pass
@@ -230,8 +229,8 @@ class TestingUI_2(BaseUI):
 		self.textarea2 = Window(self.main_window, math.floor(maxy/2), maxx, math.floor(maxy/2), 0)
 			
 	async def test_worker_1(self):
-		try:
-			while True:
+		while True:
+			try:
 				await asyncio.sleep(0)
 				if self.close:
 					return
@@ -240,10 +239,9 @@ class TestingUI_2(BaseUI):
 						'another',
 						'test']
 				self.textarea1.contents = random.choice(messages)+" "+str(random.randint(0, 99999))
-		except KeyboardInterrupt:
-			self.cleanup()
-			self.close = True
-			return
+			except KeyboardInterrupt:
+				self.cleanup()
+				self.close = True
 	
 	
 	async def test_worker_2(self):
@@ -260,7 +258,7 @@ class TestingUI_2(BaseUI):
 		except KeyboardInterrupt:
 			self.cleanup()
 			self.close = True
-			return		
+			return
 
 
 class TestingUI_3(BaseUI):
@@ -276,7 +274,7 @@ class TestingUI_3(BaseUI):
 	async def test_worker(self):
 		try:
 			while True:
-				await asyncio.sleep(0.01)
+				await asyncio.sleep(0)
 				r = random.randint(0, self.rows-1)
 				c = random.randint(0, self.cols-1)
 				textarea = self.layout.sub_windows[r][c]
@@ -298,36 +296,38 @@ class TestingUI_4(BaseUI):
 	'''
 	def setup(self):
 		self.text_window = BorderedWindow(self.main_window)
+		curses.init_pair(DEFAULT_COLOR, curses.COLOR_WHITE, curses.COLOR_BLACK)
 		
 	def key_stroke_handler(self, key):
-		self.text_window.add(str(key))
+		try:
+			self.text_window.add(key)
+		except KeyboardInterrupt:
+			self.cleanup()
+			self.close = True
+			return
 	
 
 def run_testing_ui():
-	try:
-		'''
-		with TestingUI_1(frame_rate=1) as ui:
-			loop = asyncio.get_event_loop()
-			asyncio.ensure_future(ui.test_worker())
-			loop.run_until_complete(ui.screen_updater())
-		
-		with TestingUI_2(frame_rate=1) as ui:
-			loop = asyncio.get_event_loop()
-			asyncio.ensure_future(ui.test_worker_1())
-			asyncio.ensure_future(ui.test_worker_2())
-			loop.run_until_complete(ui.screen_updater())
-			
-		with TestingUI_3(frame_rate=1) as ui:
-			loop = asyncio.get_event_loop()
-			asyncio.ensure_future(ui.test_worker())
-			loop.run_until_complete(ui.screen_updater())
-		'''
-		with TestingUI_4(frame_rate=10) as ui:
-			loop = asyncio.get_event_loop()
-			asyncio.ensure_future(ui.keyboard_listener())
-			loop.run_until_complete(ui.screen_updater())
-	except KeyboardInterrupt:
-		print('ending program')
+	with TestingUI_1(rate=1) as ui:
+		loop = asyncio.get_event_loop()
+		asyncio.ensure_future(ui.test_worker())
+		loop.run_until_complete(ui.screen_updater())
+	
+	with TestingUI_2(rate=1) as ui:
+		loop = asyncio.get_event_loop()
+		asyncio.ensure_future(ui.test_worker_1())
+		asyncio.ensure_future(ui.test_worker_2())
+		loop.run_until_complete(ui.screen_updater())
+	'''
+	with TestingUI_3(rate=1) as ui:
+		loop = asyncio.get_event_loop()
+		asyncio.ensure_future(ui.test_worker())
+		loop.run_until_complete(ui.screen_updater())
+	'''
+	with TestingUI_4(rate=0.1) as ui:
+		loop = asyncio.get_event_loop()
+		asyncio.ensure_future(ui.keyboard_listener())
+		loop.run_until_complete(ui.screen_updater())
 		
 
 if __name__=='__main__':
