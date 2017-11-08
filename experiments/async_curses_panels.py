@@ -4,55 +4,86 @@ import time
 
 DEFAULT_COLOR = 1
 
+TESTING = False
+
 
 #### ASYNC UTILS ####
-def keyboard_interuptable_loop_coroutine(f):
-	async def func_wrapper(*args, **kwargs):
-		self = args[0]
-		name = args[1]
-		print(f'{__name__}')
-		while self.close == False:
-			try:
-				await asyncio.sleep(0)
-				await f(*args, **kwargs)
-			except KeyboardInterrupt as kbi:
-				print(f'KeyboardInterup in keyboard_inteupable_loop_coroutine func_wrapper: {name}')
-				self.close = True
-				
-		print(f'ending keyboard_inteupable_loop_coroutine func_wrapper: {name}: self.close: {self.close}')
-	return func_wrapper
-
 async def keep_running_till_all_others_complete(loop):
+	'''
+		This function is used to keep a asyncio loop going until all other tasks
+		have completed. It is meant to be called from the 'loop.run_until_complete' function
+	'''
 	tasks = asyncio.Task.all_tasks(loop)
-	print('starting up loop_closer')
 	not_done = True
 	while not_done:
+		await asyncio.sleep(0.1)
 		not_done = False
 		for task in tasks:
 			if task.done() == False and task is not asyncio.Task.current_task(loop):
 				not_done = True
 				break
-		await asyncio.sleep(0.1)
-	
-	print(f'closing down loop')
+
+
+def keyboard_interuptable_loop_coroutine(f):
+	'''
+		This decorator is to be used with the TaskLoopBase class and helps
+		with shutting down multiple tasks when there is a KeyboardInterrupt event.
+	'''
+	async def func_wrapper(*args, **kwargs):
+		self = args[0] 
+		while self.close == False:
+			try:
+				await asyncio.sleep(0)
+				await f(*args, **kwargs)
+			except KeyboardInterrupt as kbi:
+				self.close = True
+	return func_wrapper
+
 
 class TaskLoopBase:
+	'''
+		This class is ment to be the Base for other classes that have a set
+		of tasks that are, for the most part, infinate loops and are stopped by
+		a KeyboardInterupt event. It also helps with simplifying the setup and
+		running of these classes. TaskLoopBase is a context manager and should 
+		be used with a 'with' block.
+	'''
 	def __init__(self):
-		self.close = False
-		self.tasks = []
+		self.close = False # the flag to let the looping tasks know when to shut down
+		self.tasks = [] # a list of tasks to run in the asyncio loop. they should all be coroutines.
 		
 	def __enter__(self):
+		'''
+			for setup of context managers
+		'''
+		self.setup()
 		return self
+		
+	def setup(self):
+		'''
+			called by the __enter__ method and is where sub-classes should
+			do what is needed during the objects creation phase
+		'''
+		pass
 		
 	def __exit__(self, *args):
 		self.cleanup()
 		
 	def cleanup(self):
+		'''
+			called by the __exit__ method and is where sub-classes should do
+			what is needed during the objects shutdown phase.
+		'''
 		pass
 		
 	
 	
 	def add_task(self, task):
+		'''
+			use this to add coroutines to the list of things that should run
+			these should be created before calling the run_until_complete method
+			below.
+		'''
 		self.tasks.append(task)
 	
 	def run_until_complete(self):
@@ -74,160 +105,15 @@ class TaskLoopBase:
 	
 	
 	
-
-
-class Window:
-	"""
-		represents a window space on the screen that you can place text in
-	"""
-	contents = None
-	def __init__(self, parent, height=-1, width=-1, y_start=0, x_start=0):
-		if height == -1:
-			height = parent.getmaxyx()[0]
-		if width == -1:
-			width = parent.getmaxyx()[1]
-			
-		self.parent = parent
-		self.parent.nodelay(True)
-		self.text_area = self.parent.derwin(height, width, y_start, x_start)
-		self.text_area.scrollok(True)
-		self.text_area.nodelay(True)
-		self.Contents = ''
-
-	@property
-	def contents(self):
-		''' getter for contents (mainly ment to create a property for the following setter)'''
-		return self.Contents
-	
-	@contents.setter
-	def contents(self, value):
-		''' setter for contests of the text area '''
-		self.clear_text()
-		self.Contents = str(value)
-		self.text_area.addstr(0,0, self.Contents)
-		self.text_area.noutrefresh()
-
-	def add(self, text, color=DEFAULT_COLOR):
-		self.text_area.addstr(text, curses.color_pair(color))
-		self.text_area.noutrefresh()
-		
-	
-	def clear_text(self):
-		''' clears the window '''
-		# this is probobly a bit of a hack but ...
-		#	self.text_area.clear() makes everything blink
-		maxy, maxx = self.text_area.getmaxyx()
-		self.text_area.addstr(0,0, ' '*maxy*maxx)
-		self.text_area.noutrefresh()
-		
-	@property
-	def maxyx(self):
-		return self.text_area.getmaxyx()
-
-class BaseUI1:
-	'''
-		a class that represents the UI and is used as the base for specific UIs
-	'''
-	def __init__(self, rate=1):
-		'''
-			creates the UI and sets it's fram rate.
-		'''
-		
-		self.rate = rate
-		self.close = False
-		
-		
-	def __enter__(self):
-		'''
-			initalizes this UI for use in context managers
-		'''
-		#self.main_window = curses.initscr()
-		#self.main_window.nodelay(True)
-		#self.main_window.keypad(True)
-		#curses.noecho()
-		#curses.start_color()
-		self.setup()
-		return self
-		
-	def setup(self):
-		'''
-			this is where you create all the sub windows/etc for the class
-		'''
-		pass
-		
-	def cleanup(self):
-		'''
-			this is where you do any special clean up when closing down your UI
-		'''
-		pass
-		
-	def __exit__(self, *args):
-		'''
-			used to return the consle back to normal after leaving the context
-		'''
-		curses.nocbreak()
-		curses.endwin()
-
-
-	def keyboard_interuptable_loop_coroutine(f):
-		async def func_wrapper(*args, **kwargs):
-			self = args[0]
-			print(self)
-			while self.close == False:
-				await asyncio.sleep(0)
-				try:
-					await f(*args, **kwargs)
-				except KeyboardInterrupt as kbi:
-					self.cleanup()
-					self.close = True
-		return func_wrapper
-
-	@property
-	def maxyx(self):
-		return self.main_window.getmaxyx()
-	
-	
-	async def screen_updater(self):
-		'''
-			a Job that is used to refresh the screen at the specified frame rate
-		'''
-		await asyncio.sleep(self.rate)
-		self.pre_update_work()
-		#curses.doupdate()
-		
-	def pre_update_work(self):
-		pass
-	
-	@keyboard_interuptable_loop_coroutine
-	async def keyboard_listener(self):
-		key = await self.get_key()
-		if key is not None:
-			self.key_stroke_handler(key)
-
-
-	async def get_key(self):
-		await asyncio.sleep(0.1)
-		ch = None
-		try:
-			ch = self.main_window.get_wch()
-		except curses.error as e:
-			return None
-		return ch
-		
-	def key_stroke_handler(self, key):
-		pass 
-
-
-	
-	
-	
-	
 	
 	
 	
 	
 	
 class TestUI_1(TaskLoopBase):
+	'''
+		testing very little blocking
+	'''
 	@keyboard_interuptable_loop_coroutine
 	async def test1(self, name):
 		await asyncio.sleep(1)
@@ -235,6 +121,9 @@ class TestUI_1(TaskLoopBase):
 		print(f'running test 1 {name}')
 		
 class TestUI_2(TaskLoopBase):
+	'''
+		testing more blocking
+	'''
 	@keyboard_interuptable_loop_coroutine
 	async def test1(self, name):
 		#await asyncio.sleep(1)
