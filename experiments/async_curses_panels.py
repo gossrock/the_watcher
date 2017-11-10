@@ -1,6 +1,7 @@
 import asyncio
 import curses
 import time
+from collections import namedtuple
 
 DEFAULT_COLOR = 1
 
@@ -102,31 +103,80 @@ class TaskLoopBase:
 	
 
 #### CURSES UTILS ####
+WindowSize = namedtuple('WindowSize', ['maxx', 'maxy'])
 class Window:
-	pass
+	def __init__(self, parent, height=-1, width=-1, y_start=0, x_start=0, border=False):
+		self.parent = parent
+		self.c_border_window = None
+		self.c_window = None
+		self.c_panel = None
+		
+	def content_size(self):
+		maxy self.c_window.
+		
+	def total_size(self):
+		
+	def size(self):
 	
 class BaseUI(TaskLoopBase):
-	def __init__(self):
+	def __init__(self, rate=1):
 		super(BaseUI, self).__init__()
+		self.rate = rate
 	
 	def __enter__(self):
-		super(BaseUI, self).__enter__()
+		self.main_window = curses.initscr()
+		self.main_window.nodelay(True)
+		self.main_window.keypad(True)
+		curses.noecho()
+		curses.start_color()
+		return super(BaseUI, self).__enter__()
+		self.setup()
 		
 	def setup(self):
 		pass
 	
 	def __exit__(self, *args):
+		self.cleanup()
+		curses.nocbreak()
+		curses.endwin()
 		super(BaseUI, self).__exit__(*args)
 	
 	def cleanup(self):
 		pass
 		
-	
+	@property
+	def maxyx(self):
 		
-	
+		return self.main_window.getmaxyx()
+		
+	@keyboard_interuptable_loop_coroutine
+	async def screen_updater(self):
+		'''
+			a Job that is used to refresh the screen at the specified frame rate
+		'''
+		asyncio.sleep(self.rate)
+		curses.doupdate()
+		
+	@keyboard_interuptable_loop_coroutine
+	async def keyboard_listener(self):
+		key = await self.get_key()
+		if key is None:
+			continue
+		else:
+			self.key_stroke_handler(key)
 
 
-
+	async def get_key(self):
+		await asyncio.sleep(0.1)
+		ch = None
+		try:
+			ch = self.main_window.get_wch()
+		except curses.error as e:
+			return None
+		return ch
+		
+	def key_stroke_handler(self, key):
+		pass
 
 
 	
