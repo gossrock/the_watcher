@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.subprocess import Process
 import typing
 from typing import NamedTuple, List
 
@@ -8,13 +9,13 @@ class CommandResult(NamedTuple):
 	error:str
 
 async def run_command_str(command_string:str) -> CommandResult:
-	split_string = command_string.split(' ')
+	split_string:List[str] = command_string.split(' ')
 	return await run_command(split_string)
 	
 
 async def run_command(command:List[str]) -> CommandResult:
 	try:
-		process = await asyncio.create_subprocess_exec( *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+		process:Process = await asyncio.create_subprocess_exec( *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 	except FileNotFoundError as e:
 		return CommandResult(command, '', str(e))
 	stdout, stderr = await process.communicate()
@@ -24,7 +25,8 @@ async def run_command(command:List[str]) -> CommandResult:
 	
 	
 def command_to_string(command:List[str]) -> str:
-	command_string = ''
+	command_string:str = ''
+	part:str
 	for part in command:
 		if command_string != '':
 			command_string += ' '
