@@ -1,7 +1,12 @@
 import asyncio
 import curses
 import time
-from collections import namedtuple
+#from collections import namedtuple
+
+from typing import Callable, Set, List, NamedTuple
+from asyncio import Task
+from asyncio.events import AbstractEventLoop
+
 
 DEFAULT_COLOR = 1
 
@@ -9,22 +14,22 @@ TESTING = False
 
 
 #### ASYNC UTILS ####
-async def keep_running_till_all_others_complete(loop):
+async def keep_running_till_all_others_complete(loop:AbstractEventLoop) -> None:
 	'''
 		This function is used to keep a asyncio loop going until all other tasks
 		have completed. It is meant to be called from the 'loop.run_until_complete' function
 	'''
-	tasks = asyncio.Task.all_tasks(loop)
-	not_done = True
-	while not_done:
-		await asyncio.sleep(0.1)
-		not_done = False
+	tasks:Set[Task] = asyncio.Task.all_tasks(loop)
+	done:bool = False
+	while not done:
+		await asyncio.sleep(0)
+		done = True
 		for task in tasks:
 			if task.done() == False and task is not asyncio.Task.current_task(loop):
-				not_done = True
+				done = False
 				break
 
-def keyboard_interuptable_loop_coroutine(f):
+def keyboard_interuptable_loop_coroutine(f:Callable) -> Callable:
 	'''
 		This decorator is to be used with the TaskLoopBase class and helps
 		with shutting down multiple tasks when there is a KeyboardInterrupt event.
@@ -47,32 +52,32 @@ class TaskLoopBase:
 		running of these classes. TaskLoopBase is a context manager and should 
 		be used with a 'with' block.
 	'''
-	def __init__(self):
-		self.close = False # the flag to let the looping tasks know when to shut down
-		self.tasks = [] # a list of tasks to run in the asyncio loop. they should all be coroutines.
+	def __init__(self) -> None:
+		self.close:bool = False # the flag to let the looping tasks know when to shut down
+		self.tasks:List[Task] = [] # a list of tasks to run in the asyncio loop. they should all be coroutines.
 		
-	def __enter__(self):
+	def __enter__(self) -> 'TaskLoopBase':
 		self.setup()
 		return self
 		
-	def setup(self):
+	def setup(self) -> None:
 		'''
 			called by the __enter__ method and is where sub-classes should
 			do what is needed during the objects creation phase
 		'''
 		pass
 		
-	def __exit__(self, *args):
+	def __exit__(self, *args:List) -> None:
 		self.cleanup()
 		
-	def cleanup(self):
+	def cleanup(self) -> None:
 		'''
 			called by the __exit__ method and is where sub-classes should do
 			what is needed during the objects shutdown phase.
 		'''
 		pass
 	
-	def add_task(self, task):
+	def add_task(self, task:Task) -> None:
 		'''
 			use this to add coroutines to the list of things that should run
 			these should be created before calling the run_until_complete method
@@ -80,8 +85,8 @@ class TaskLoopBase:
 		'''
 		self.tasks.append(task)
 	
-	def run_until_complete(self):
-		loop = asyncio.get_event_loop()
+	def run_until_complete(self) -> None:
+		loop:AbstractEventLoop = asyncio.get_event_loop()
 		try:
 			for task in self.tasks:
 				asyncio.ensure_future(task)
@@ -98,30 +103,65 @@ class TaskLoopBase:
 	
 	
 	
-	
+	#Window
+			# has:
+			#	parent
+			#	hight
+			#	width
+			#	y_start
+			#	x_start
+			#	curses_window
+			#	
+			# can:
+			#	refresh
+			#	resize
+		
+		#ContainerWindow
+				# has:
+				#	children list of other windows
+				# can:
+				#	add child
+				#	remove child
+				# will:
+				#	refresh children when refreshed
+				#	resize childern when resized
+				
+			#BaseUI
+					# Parent is None
+					# will:
+					#	run a window refresher
+					#	run a keyboard listener
+			# 
 	
 	
 
 #### CURSES UTILS ####
-WindowSize = namedtuple('WindowSize', ['maxx', 'maxy'])
+class WindowSize(NamedTuple):
+	maxx:int
+	maxy:int
+	
 class Window:
-	def __init__(self, parent, height=-1, width=-1, y_start=0, x_start=0, border=False):
-		self.parent = parent
+	def __init__(self, parent:'Window', height:int=-1, width:int=-1, 
+					y_start:int=0, x_start:int=0, border:bool=False) -> None:
+		self.parent:'Window' = parent
 		self.c_border_window = None
 		self.c_window = None
 		self.c_panel = None
 		
+		
+'''
 	def content_size(self):
 		maxy self.c_window.
 		
 	def total_size(self):
 		
 	def size(self):
-	
+'''
+
 class BaseUI(TaskLoopBase):
-	def __init__(self, rate=1):
+	def __init__(self, rate:float=1) -> None:
 		super(BaseUI, self).__init__()
-		self.rate = rate
+		self.rate:float = rate
 	
 	def __enter__(self):
 		self.main_window = curses.initscr()
@@ -160,9 +200,7 @@ class BaseUI(TaskLoopBase):
 	@keyboard_interuptable_loop_coroutine
 	async def keyboard_listener(self):
 		key = await self.get_key()
-		if key is None:
-			continue
-		else:
+		if key is not None:
 			self.key_stroke_handler(key)
 
 
@@ -203,6 +241,9 @@ class TestUI_2(TaskLoopBase):
 		
 def tests():
 	print('starting')
+	
+	ui:BaseUI
+	
 	with TestUI_1() as ui:
 		ui.add_task(ui.test1('A'))
 		ui.add_task(ui.test1('B'))
