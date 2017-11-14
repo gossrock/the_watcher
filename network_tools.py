@@ -1,15 +1,25 @@
 import asyncio
+from asyncio.futures import Future
 import ipaddress
 import socket
 
-from collections import namedtuple
+from typing import NamedTuple, List, Optional, TYPE_CHECKING
 
-from command_execution import run_command, run_command_str, print_result
+from command_execution import run_command, run_command_str, print_result, CommandResult
+
+#EnsuredFuture = asyncio.futures.Future[Tuple[builtins.list[builtins.str], builtins.str, builtins.str, fallback=command_execution.CommandResult]]
 
 #### DEFAULT NETWORK ####
-NetworkInfo = namedtuple('NetworkInfo', ['interface_name', 'network_address', 'gateway', 'host_address'])
-async def get_default_nework_info():
-	command_results = await run_command_str('ip route')
+#NetworkInfo = namedtuple('NetworkInfo', ['interface_name', 'network_address', 'gateway', 'host_address'])
+class NetworkInfo(NamedTuple):
+	interface_name:str
+	network_address:str
+	gateway:str
+	host_address:str
+
+
+async def get_default_nework_info() -> Optional[NetworkInfo]:
+	command_results:CommandResult = await run_command_str('ip route')
 	# if there is a default route this command will return something like:
 	
 	# default via 192.168.0.1 dev wlan0
@@ -19,13 +29,13 @@ async def get_default_nework_info():
 	
 	# on each of the following lines there is something like this for each interface
 	#192.168.0.0/24 dev wlan0 proto kernel scope link src 192.168.0.100 metric 600 
-	gateway = None
-	interface_name = None
-	network_address = None
-	host_address = None
+	gateway:str
+	interface_name:str
+	network_address:str
+	host_address:str
 	
-	result_lines = command_results.out.split('\n')
-	words = result_lines[0].split(' ') 
+	result_lines:List[str] = command_results.out.split('\n')
+	words:List[str] = result_lines[0].split(' ') 
 	
 	
 	if words[0] == 'default': # it has a default route.
@@ -52,7 +62,7 @@ async def get_default_nework_info():
 
 
 #### REVERSE DNS ####
-def reverse_dns(ip):
+def reverse_dns(ip:str) ->Optional[str]:
 	if ip is not None:
 		try:
 			return socket.gethostbyaddr(ip)[0]
@@ -63,10 +73,16 @@ def reverse_dns(ip):
 
 
 #### PING ####
-PingResults = namedtuple('PingResults', ['host', 'ip', 'state', 'time', 'error'])
+#PingResults = namedtuple('PingResults', ['host', 'ip', 'state', 'time', 'error'])
+class PingResults(NamedTuple):
+	host:Optional[str]
+	ip:Optional[str]
+	state:Optional[bool]
+	time:Optional[str]
+	error:Optional[str]
 
-async def ping(host):
-	return await run_command('ping', '-c', '1', '-W', '1', host)
+async def ping(host:str) -> CommandResult:
+	return await run_command(['ping', '-c', '1', '-W', '1', host])
 
 #### PARSE PING RESULTS ####
 STATE_UP = True
@@ -77,13 +93,13 @@ ERROR_UNKNOWN = 'unknown host'
 ERROR_NO_NETWORK = 'Network is unreachable'
 ERROR_BRODCAST = 'Do you want to ping broadcast?'
 ERROR_BRODCAST_MSG = 'brodcast address ping'
-def parse_ping_output(command, out, error):
-	what_was_pinged = None
-	ip_of_what_was_pinged = None
-	r_dns = None
-	up_or_down = None
-	ping_time = None
-	error_type = None
+def parse_ping_output(command:List[str], out:str, error:str) -> PingResults:
+	what_was_pinged:Optional[str] = None
+	ip_of_what_was_pinged:Optional[str] = None
+	r_dns:Optional[str] = None
+	up_or_down:Optional[bool] = None
+	ping_time:Optional[str] = None
+	error_type:Optional[str] = None
 	
 	if out!='': # if out has something
 		splitout = out.split('\n')
@@ -111,14 +127,14 @@ def parse_ping_output(command, out, error):
 			error_type = error
 		
 	if ip_of_what_was_pinged is not None and up_or_down == STATE_UP:
-		r_dns = reverse_dns(ip_of_what_was_pinged)
+		r_dns = reverse_dns(str(ip_of_what_was_pinged))
 	
 	return PingResults(host=what_was_pinged, ip=ip_of_what_was_pinged, 
 						state=up_or_down, time=ping_time, error=error_type)
 
 
 #### PRINT PING RESULTS ####
-def print_ping_results(results):
+def print_ping_results(results:PingResults)->None:
 	if results.state == STATE_UP:
 		print(f'\r{results.ip}\t{results.time}ms\t{reverse_dns(results.ip)}\t IS UP')
 	else:
@@ -129,12 +145,13 @@ def print_ping_results(results):
 
 
 #### PING SCAN ####
-async def ping_scan(network):
-	results = []
-	tasks = []
+async def ping_scan(network:str) -> List[CommandResult]:
+	results:List[CommandResult] = []
+	tasks:List[Future] = []
 	for host in ipaddress.ip_network(network):
 		await asyncio.sleep(0)
-		task = asyncio.ensure_future(ping(str(host)))
+		task:Future = asyncio.ensure_future(ping(str(host)))
+		#if TYPE_CHECKING: reveal_type(task)
 		tasks.append(task)
 		
 	for task in tasks:
@@ -155,7 +172,7 @@ async def ping_scan(network):
 def run_test():
 	loop = asyncio.get_event_loop()
 	
-	'''
+	
 	#test 1
 	result = loop.run_until_complete(ping('10.10.1.1'))
 	print_result(result)
@@ -177,7 +194,7 @@ def run_test():
 		parsed_results = parse_ping_output(*result)
 		#if parsed_results.state == STATE_UP:
 		print_ping_results(parsed_results)
-	'''
+	
 	# testing local interface function
 	results = loop.run_until_complete(get_default_nework_info())
 	loop.close()
