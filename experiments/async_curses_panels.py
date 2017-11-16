@@ -1,7 +1,6 @@
 import asyncio
 import curses
 import time
-#from collections import namedtuple
 
 from typing import Callable, Set, List, NamedTuple
 from asyncio import Task
@@ -102,63 +101,93 @@ class TaskLoopBase:
 	
 	
 	
-	
-	#Window
-			# has:
-			#	parent
-			#	hight
-			#	width
-			#	y_start
-			#	x_start
-			#	curses_window
-			#	
-			# can:
-			#	refresh
-			#	resize
+#TaskLoopBase
+		# has:
+		#	close flag (to be used with @keyboard_interuptable_loop_coroutine
+		#	tasks list
+		# is context manager so has/can:
+		#	__enter__
+		#	__exit__
+		# support for subclasses:
+		#	setup() -> called by __enter__
+		#	cleanup() -> called by __exit__
+		# can:
+		#	add_task(task)
+		#	run_until_complete (coroutine)
+	#BaseUI
+		# subclassed so that it has access to all of the above
+		# subclasses of BaseUI can add additional tasks and use setup and cleanup
 		
-		#ContainerWindow
+#Window
+		# has:
+		#	parent
+		#	hight
+		#	width
+		#	y_start
+		#	x_start
+		#	curses_window
+		#	curses_border
+		#	curses_
+		#	
+		# can:
+		#	refresh
+		#	resize
+	
+	#ContainerWindow
+			# has:
+			#	children list of other windows (windows can also be container windows)
+			# can:
+			#	add child
+			#	remove child
+			# will:
+			#	refresh children when refreshed
+			#	resize childern when resized
+			
+		#BaseUI (also sub class of TaskLoopBase)
 				# has:
-				#	children list of other windows
-				# can:
-				#	add child
-				#	remove child
+				# 	parent == None
 				# will:
-				#	refresh children when refreshed
-				#	resize childern when resized
+				#	run a window refresher
+				#	run a keyboard listener
+		#BoxLayout (vertical/horizontal)
+				#layout by % of total space or #lines.
+				#number of lines over ride total space
+				#min size is 1 line of content (that means 3 lines if there is a border)
+				#after number of lines and min size then % is calculated.
+				#% is to the nearest line
+				#last section gets rounded up or down depending on what's left.
+		#TableLayout (#rows #cols)
+				#list of row and col %/#lines similar rules to boxlayout.
 				
-			#BaseUI
-					# Parent is None
-					# will:
-					#	run a window refresher
-					#	run a keyboard listener
-			# 
 	
 	
 
 #### CURSES UTILS ####
 class WindowSize(NamedTuple):
-	maxx:int
 	maxy:int
+	maxx:int
+	
 	
 class Window:
 	def __init__(self, parent:'Window', height:int=-1, width:int=-1, 
-					y_start:int=0, x_start:int=0, border:bool=False) -> None:
+					y_start:int=0, x_start:int=0, border:bool=False, panel:bool=False) -> None:
 		self.parent:'Window' = parent
-		self.c_border_window = None
-		self.c_window = None
-		self.c_panel = None
+		self.curses_border_window = None
+		self.curses_window = None
+		self.curses_panel = None
 		
+	@property
+	def maxyx(self):	
+		return WindowSize(self.curses_window.getmaxyx())
 		
-'''
-	def content_size(self):
-		maxy self.c_window.
-		
-	def total_size(self):
-		
-	def size(self):
-'''
+	def refresh_contents(self):
+	def refresh_border(self): ...
+	def refresh(self):
+		self.refresh_border()
+		self.refresh_contents()
+	
 
-class BaseUI(TaskLoopBase):
+class BaseUI(TaskLoopBase, Window):
 	def __init__(self, rate:float=1) -> None:
 		super(BaseUI, self).__init__()
 		self.rate:float = rate
@@ -170,24 +199,12 @@ class BaseUI(TaskLoopBase):
 		curses.noecho()
 		curses.start_color()
 		return super(BaseUI, self).__enter__()
-		self.setup()
-		
-	def setup(self):
-		pass
 	
 	def __exit__(self, *args):
-		self.cleanup()
-		curses.nocbreak()
-		curses.endwin()
 		super(BaseUI, self).__exit__(*args)
-	
-	def cleanup(self):
-		pass
-		
-	@property
-	def maxyx(self):
-		
-		return self.main_window.getmaxyx()
+		curses.nocbreak()
+		curses.endwin()	
+
 		
 	@keyboard_interuptable_loop_coroutine
 	async def screen_updater(self):
