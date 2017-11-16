@@ -45,8 +45,6 @@ class BaseUI(ABC, TaskLoopBase):
 	async def keyboard_listener(self) -> None:
 		key = await self.get_key()
 		if key is not None:
-			
-			self.main_window.noutrefresh()
 			self.key_stroke_handler(key)
 	
 	async def get_key(self) -> Union[str,int,None]:
@@ -54,12 +52,14 @@ class BaseUI(ABC, TaskLoopBase):
 		
 		ch:Union[str, bytes, int, None] = None
 		try:
-			ch = self.main_window.get_wch()
+			ch = self.main_window.get_wch() # type: ignore
 		except curses.error as e:
 			return None
 		if type(ch) == bytes:
 			ch = str(ch)
 		return cast(Union[str,int,None],ch)
+		
+	def key_stroke_handler(self, key:Union[str, int]) -> None: ...
 		
 	#
 
@@ -84,7 +84,7 @@ class TextArea:
 # Tests
 class SimplestUI(BaseUI):
 	def key_stroke_handler(self, key:Union[str,int]) -> None:
-		self.main_window.addstr(str(key))
+		self.main_window.addstr(str(key)) # type: ignore
 		self.main_window.noutrefresh()
 	
 
